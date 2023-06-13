@@ -20,3 +20,6 @@ plt.tight_layout()
 
 # Show the plot
 plt.show()
+
+# Method 1: Using lambda function with apply
+df['Month'] = df['Month'].apply(lambda x: calendar.month_name[x])
