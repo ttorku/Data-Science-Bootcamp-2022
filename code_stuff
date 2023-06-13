@@ -23,3 +23,7 @@ plt.show()
 
 # Method 1: Using lambda function with apply
 df['Month'] = df['Month'].apply(lambda x: calendar.month_name[x])
+
+# Method 2: Using mapping dictionary with apply
+month_mapping = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'}
+df['Month'] = df['Month'].apply(lambda x: month_mapping[x])
