@@ -1,0 +1,22 @@
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Assuming you have the entire dataset stored in a pandas DataFrame called 'df'
+
+# Convert the 'Month' column to datetime if it's not already in datetime format
+df['Month'] = pd.to_datetime(df['Month'])
+
+# Set the figure size
+plt.figure(figsize=(10, 6))
+
+# Iterate over each month and create separate histograms
+for month in df['Month'].dt.strftime('%b %Y').unique():
+    plt.subplot(1, len(df['Month'].dt.strftime('%b %Y').unique()), list(df['Month'].dt.strftime('%b %Y').unique()).index(month) + 1)
+    sns.histplot(data=df[df['Month'].dt.strftime('%b %Y') == month], x='Dividend', kde=True)
+    plt.title(month)
+
+# Adjust the layout
+plt.tight_layout()
+
+# Show the plot
+plt.show()
