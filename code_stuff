@@ -27,3 +27,55 @@ df['Month'] = df['Month'].apply(lambda x: calendar.month_name[x])
 # Method 2: Using mapping dictionary with apply
 month_mapping = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'}
 df['Month'] = df['Month'].apply(lambda x: month_mapping[x])
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+# Step 3: Explore the data
+y1 = np.array([1, 2, 3, 4, 5])  # Replace with your actual data
+y2 = np.array([2, 3, 4, 5, 6])  # Replace with your actual data
+
+# Calculate descriptive statistics
+y1_mean = np.mean(y1)
+y1_std = np.std(y1)
+
+y2_mean = np.mean(y2)
+y2_std = np.std(y2)
+
+# Visualize the distributions
+plt.hist(y1, bins='auto', alpha=0.7, label='y1')
+plt.hist(y2, bins='auto', alpha=0.7, label='y2')
+plt.legend(loc='upper right')
+plt.xlabel('Values')
+plt.ylabel('Frequency')
+plt.title('Distributions of y1 and y2')
+plt.show()
+
+# Step 4: Compare the distributions
+print('Descriptive Statistics:')
+print('y1 mean:', y1_mean)
+print('y1 standard deviation:', y1_std)
+print('y2 mean:', y2_mean)
+print('y2 standard deviation:', y2_std)
+
+# Perform statistical tests
+ks_stat, ks_p_value = stats.ks_2samp(y1, y2)
+mwu_stat, mwu_p_value = stats.mannwhitneyu(y1, y2, alternative='two-sided')
+
+print('\nStatistical Test Results:')
+print('Kolmogorov-Smirnov test:')
+print('KS statistic:', ks_stat)
+print('p-value:', ks_p_value)
+
+print('\nMann-Whitney U test:')
+print('MWU statistic:', mwu_stat)
+print('p-value:', mwu_p_value)
+
+# Step 5: Detect drift
+alpha = 0.05  # Set the significance level
+if ks_p_value < alpha or mwu_p_value < alpha:
+    print('\nData drift is detected from y1 to y2.')
+else:
+    print('\nNo significant data drift from y1 to y2.')
