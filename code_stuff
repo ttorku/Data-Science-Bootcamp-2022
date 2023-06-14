@@ -110,3 +110,186 @@ Certainly! Let's go through each step in more detail:
    - Conversely, if both p-values are above the significance level, it suggests that there is no significant data drift between y1 and y2.
 
 By combining these steps, the code provides a comprehensive analysis of the data distributions, performs statistical tests to compare the distributions, and determines the presence or absence of significant data drift based on the obtained p-values.
+
+
+
+Yes, it is possible to compute confidence intervals around the test statistic values for both the Mann-Whitney U test and the Kolmogorov-Smirnov (KS) test. However, it's important to note that the interpretation of confidence intervals for these test statistics can be a bit more complex compared to traditional parametric tests. Here's an overview of how you can compute confidence intervals for these tests:
+
+**Mann-Whitney U Test**:
+The Mann-Whitney U test does not directly provide a confidence interval for the U statistic. However, you can use bootstrapping to estimate a confidence interval. Here's a modified version of the code that includes bootstrapping to compute a confidence interval for the U statistic:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+# Step 3: Explore the data
+y1 = np.array([1, 2, 3, 4, 5])  # Replace with your actual data
+y2 = np.array([2, 3, 4, 5, 6])  # Replace with your actual data
+
+# Calculate descriptive statistics
+y1_mean = np.mean(y1)
+y1_std = np.std(y1)
+
+y2_mean = np.mean(y2)
+y2_std = np.std(y2)
+
+# Visualize the distributions
+plt.hist(y1, bins='auto', alpha=0.7, label='y1')
+plt.hist(y2, bins='auto', alpha=0.7, label='y2')
+plt.legend(loc='upper right')
+plt.xlabel('Values')
+plt.ylabel('Frequency')
+plt.title('Distributions of y1 and y2')
+plt.show()
+
+# Step 4: Compare the distributions
+print('Descriptive Statistics:')
+print('y1 mean:', y1_mean)
+print('y1 standard deviation:', y1_std)
+print('y2 mean:', y2_mean)
+print('y2 standard deviation:', y2_std)
+
+# Perform Mann-Whitney U test
+mwu_stat, mwu_p_value = stats.mannwhitneyu(y1, y2, alternative='two-sided')
+
+# Bootstrap for confidence interval estimation
+n_bootstrap = 1000  # Number of bootstrap iterations
+mwu_stats_bootstrap = []
+for _ in range(n_bootstrap):
+    # Resample the data with replacement
+    y1_bootstrap = np.random.choice(y1, size=len(y1), replace=True)
+    y2_bootstrap = np.random.choice(y2, size=len(y2), replace=True)
+    
+    # Calculate the test statistic for the bootstrap sample
+    mwu_stat_bootstrap, _ = stats.mannwhitneyu(y1_bootstrap, y2_bootstrap, alternative='two-sided')
+    mwu_stats_bootstrap.append(mwu_stat_bootstrap)
+
+# Compute the confidence interval
+ci_lower = np.percentile(mwu_stats_bootstrap, 2.5)
+ci_upper = np.percentile(mwu_stats_bootstrap, 97.5)
+print('\nMann-Whitney U test:')
+print('MWU statistic:', mwu_stat)
+print('p-value:', mwu_p_value)
+print(f'95% Confidence Interval: ({ci_lower}, {ci_upper})')
+```
+
+In this code, we perform bootstrapping by resampling the data with replacement and calculating the Mann-Whitney U statistic for each bootstrap sample. We then calculate the lower and upper percentiles (2.5% and 97.5%, respectively) of the bootstrap statistics to obtain a 95% confidence interval.
+
+**Kolmogorov-Smirnov Test**:
+Similarly, the KS test does not directly provide a confidence interval for the KS statistic. However,
+
+Certainly! If you have two independent samples and want to compare their means, you can use a t-test. The t-test assumes that the data is normally distributed and that the variances of the two groups are equal (in the case of the independent t-test). Here's an example of how you can compute a t-test and perform similar analysis as before:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+# Step 3: Explore the data
+y1 = np.array([1, 2, 3, 4, 5])  # Replace with your actual data
+y2 = np.array([2, 3, 4, 5, 6])  # Replace with your actual data
+
+# Calculate descriptive statistics
+y1_mean = np.mean(y1)
+y1_std = np.std(y1)
+
+y2_mean = np.mean(y2)
+y2_std = np.std(y2)
+
+# Visualize the distributions
+plt.hist(y1, bins='auto', alpha=0.7, label='y1')
+plt.hist(y2, bins='auto', alpha=0.7, label='y2')
+plt.legend(loc='upper right')
+plt.xlabel('Values')
+plt.ylabel('Frequency')
+plt.title('Distributions of y1 and y2')
+plt.show()
+
+# Step 4: Compare the distributions
+print('Descriptive Statistics:')
+print('y1 mean:', y1_mean)
+print('y1 standard deviation:', y1_std)
+print('y2 mean:', y2_mean)
+print('y2 standard deviation:', y2_std)
+
+# Perform independent t-test
+t_stat, t_p_value = stats.ttest_ind(y1, y2)
+
+# Compute the confidence interval
+ci_diff = stats.t.interval(0.95, len(y1)+len(y2)-2, loc=(y1_mean-y2_mean), scale=np.sqrt(y1_std**2/len(y1) + y2_std**2/len(y2)))
+ci_lower, ci_upper = ci_diff
+print('\nIndependent t-test:')
+print('t statistic:', t_stat)
+print('p-value:', t_p_value)
+print(f'95% Confidence Interval: ({ci_lower}, {ci_upper})')
+```
+
+In this code, we calculate the descriptive statistics, visualize the distributions using histograms, perform an independent t-test using the `scipy.stats.ttest_ind()` function, and compute a 95% confidence interval for the difference in means using the `scipy.stats.t.interval()` function.
+
+It's important to note that the t-test assumes normality and equal variances, so ensure that these assumptions are met before interpreting the results. If the assumptions are violated, you may need to consider alternative non-parametric tests or transformations of the data.
+
+Yes, the t-test is generally used for parametric distributions, specifically when the data follows a normal distribution and the variances of the compared groups are assumed to be equal (for the independent t-test). The t-test relies on the assumption of normality to make accurate inferences about the population means.
+
+However, it's worth noting that the t-test can still be robust to violations of the normality assumption to some degree, especially when the sample sizes are large. Additionally, if the sample sizes are small and the data deviates substantially from normality, non-parametric tests or other robust statistical methods may be more appropriate.
+
+If the normality assumption is not met or if the variances of the groups are unequal, you can consider alternative tests. For example, the Mann-Whitney U test (a non-parametric test) can be used for two independent samples when the data is not normally distributed, or Welch's t-test (a modified version of the t-test) can be used for unequal variances.
+
+Therefore, it's important to assess the assumptions of the t-test and consider alternative tests when those assumptions are violated or in doubt.
+
+To check for the normality of a distribution, you can use graphical methods and statistical tests. Here are a few commonly used techniques:
+
+1. **Histogram and Q-Q Plot**:
+   - Plot a histogram to visualize the distribution of the data.
+   - Additionally, you can create a Q-Q (quantile-quantile) plot, which compares the quantiles of the data against the quantiles of a normal distribution.
+   - If the histogram and Q-Q plot show a symmetric bell-shaped distribution and the data points align closely with the diagonal line in the Q-Q plot, it suggests normality.
+
+2. **Shapiro-Wilk Test**:
+   - The Shapiro-Wilk test is a widely used statistical test to assess the normality of a distribution.
+   - The null hypothesis of the test is that the data is normally distributed. If the p-value from the test is greater than the chosen significance level (e.g., 0.05), you would fail to reject the null hypothesis, indicating the data is likely normally distributed.
+
+   ```python
+   from scipy import stats
+
+   # y is your data
+   _, p_value = stats.shapiro(y)
+   if p_value > 0.05:
+       print("Data is likely normally distributed")
+   else:
+       print("Data is not normally distributed")
+   ```
+
+3. **Kolmogorov-Smirnov Test**:
+   - The Kolmogorov-Smirnov (KS) test can also be used to test for normality.
+   - In this case, the test compares the empirical cumulative distribution function (CDF) of the data against the CDF of a normal distribution.
+   - If the p-value from the KS test is greater than the chosen significance level (e.g., 0.05), you would fail to reject the null hypothesis of normality.
+
+   ```python
+   from scipy import stats
+
+   # y is your data
+   _, p_value = stats.kstest(y, 'norm')
+   if p_value > 0.05:
+       print("Data is likely normally distributed")
+   else:
+       print("Data is not normally distributed")
+   ```
+
+4. **Skewness and Kurtosis**:
+   - Skewness measures the symmetry of a distribution, with zero indicating perfect symmetry.
+   - Kurtosis measures the tailedness or peakedness of a distribution, with zero indicating a normal distribution.
+   - You can calculate the skewness and kurtosis of your data and compare them to the expected values for a normal distribution (skewness=0, kurtosis=0).
+
+   ```python
+   from scipy.stats import skew, kurtosis
+
+   # y is your data
+   skewness = skew(y)
+   kurt = kurtosis(y)
+   if abs(skewness) < 0.5 and abs(kurt) < 0.5:
+       print("Data is likely normally distributed")
+   else:
+       print("Data is not normally distributed")
+   ```
+
+It's important to note that these methods provide indications of normality, but they are not definitive. They should be used as exploratory tools rather than absolute determinants of normality. Additionally, it's always valuable to consider the context and domain knowledge when interpreting the results.
