@@ -293,3 +293,124 @@ To check for the normality of a distribution, you can use graphical methods and 
    ```
 
 It's important to note that these methods provide indications of normality, but they are not definitive. They should be used as exploratory tools rather than absolute determinants of normality. Additionally, it's always valuable to consider the context and domain knowledge when interpreting the results.
+
+To create side-by-side box plots for historical data and new data, you can use the `matplotlib.pyplot.boxplot()` function. Here's an example of how you can visualize the data in side-by-side box plots:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Historical data and new data (replace with your actual data)
+historical_data = [1, 2, 3, 4, 5]
+new_data = [2, 3, 4, 5, 6]
+
+# Combine the data
+data = [historical_data, new_data]
+
+# Create labels for the box plots
+labels = ['Historical Data', 'New Data']
+
+# Create the side-by-side box plots
+plt.boxplot(data, labels=labels)
+
+# Set labels and title
+plt.xlabel('Data')
+plt.ylabel('Values')
+plt.title('Comparison of Historical Data and New Data')
+
+# Show the plot
+plt.show()
+```
+
+In this code, you start by defining your historical data and new data as separate lists (`historical_data` and `new_data`). Then, you combine these lists into a single list (`data`), where each element represents a dataset. 
+
+Next, you create the side-by-side box plots using `plt.boxplot(data, labels=labels)`, where `data` is the combined dataset and `labels` are the labels for each box plot.
+
+You can customize the labels, axes, and title of the plot as desired using the relevant `xlabel()`, `ylabel()`, and `title()` functions from Matplotlib.
+
+Finally, calling `plt.show()` displays the side-by-side box plots.
+
+Ensure that you have the Matplotlib library installed (`pip install matplotlib`) before running the code.
+
+
+To convert a NumPy array to a list, you can use the `tolist()` method provided by NumPy. Here's an example:
+
+```python
+import numpy as np
+
+# Example NumPy array
+arr = np.array([1, 2, 3, 4, 5])
+
+# Convert NumPy array to list
+lst = arr.tolist()
+
+print(lst)  # Output: [1, 2, 3, 4, 5]
+```
+
+In this code, the NumPy array `arr` is converted to a list using the `tolist()` method. The resulting list is assigned to the variable `lst`. Finally, `print(lst)` displays the converted list.
+
+By calling the `tolist()` method on a NumPy array, you can easily convert the array to a Python list, which can be useful when you need to work with list-specific operations or functions.
+
+To visualize the skewness of a dataset, you can create a histogram or a density plot. Here's an example of how you can plot a histogram with a skewness line:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import skew
+
+# Example dataset (replace with your actual data)
+data = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+# Calculate skewness
+data_skewness = skew(data)
+
+# Plot histogram with skewness line
+plt.hist(data, bins='auto', alpha=0.7, label='Data')
+plt.axvline(np.mean(data), color='red', linestyle='dashed', linewidth=1.5, label='Mean')
+plt.axvline(np.median(data), color='green', linestyle='dashed', linewidth=1.5, label='Median')
+plt.legend()
+plt.xlabel('Values')
+plt.ylabel('Frequency')
+plt.title('Histogram with Skewness')
+plt.text(0.75, 0.9, f'Skewness: {data_skewness:.2f}', transform=plt.gca().transAxes)
+plt.show()
+```
+
+In this code, the dataset is represented by the `data` NumPy array. You can replace it with your actual data. The code calculates the skewness using the `scipy.stats.skew()` function.
+
+The histogram is plotted using `plt.hist()` with the `bins='auto'` parameter, which automatically determines the number of bins. The dashed lines represent the mean and median of the dataset. The skewness value is displayed as text in the plot using `plt.text()`.
+
+By running this code, you can visualize the histogram of the dataset and observe the skewness indicated by the line and the skewness value displayed. A positive skewness value indicates a right-skewed distribution, while a negative value indicates a left-skewed distribution.
+
+To compute the skewness and kurtosis values for historical data and new data, you can use the `scipy.stats.skew()` and `scipy.stats.kurtosis()` functions. Here's an example:
+
+```python
+import numpy as np
+from scipy.stats import skew, kurtosis
+
+# Historical data and new data (replace with your actual data)
+historical_data = np.array([1, 2, 3, 4, 5])
+new_data = np.array([2, 3, 4, 5, 6])
+
+# Compute skewness and kurtosis
+historical_skewness = skew(historical_data)
+historical_kurtosis = kurtosis(historical_data)
+new_skewness = skew(new_data)
+new_kurtosis = kurtosis(new_data)
+
+print('Historical Data:')
+print('Skewness:', historical_skewness)
+print('Kurtosis:', historical_kurtosis)
+
+print('\nNew Data:')
+print('Skewness:', new_skewness)
+print('Kurtosis:', new_kurtosis)
+```
+
+In this code, you provide the historical data and new data as NumPy arrays (`historical_data` and `new_data`). Replace these arrays with your actual data.
+
+The `skew()` function from `scipy.stats` calculates the skewness of a dataset, and the `kurtosis()` function calculates the kurtosis. The skewness and kurtosis values are assigned to variables (`historical_skewness`, `historical_kurtosis`, `new_skewness`, and `new_kurtosis`) by calling the respective functions on the data arrays.
+
+Finally, the code prints the skewness and kurtosis values for historical data and new data.
+
+By running this code, you can obtain the skewness and kurtosis values for the respective datasets. A skewness value close to zero suggests a relatively symmetrical distribution, while positive or negative values indicate right or left skewness, respectively. Regarding kurtosis, a value close to zero indicates a similar level of peakedness compared to a normal distribution, while positive values indicate higher peakedness (leptokurtic) and negative values indicate lower peakedness (platykurtic).
