@@ -414,3 +414,87 @@ The `skew()` function from `scipy.stats` calculates the skewness of a dataset, a
 Finally, the code prints the skewness and kurtosis values for historical data and new data.
 
 By running this code, you can obtain the skewness and kurtosis values for the respective datasets. A skewness value close to zero suggests a relatively symmetrical distribution, while positive or negative values indicate right or left skewness, respectively. Regarding kurtosis, a value close to zero indicates a similar level of peakedness compared to a normal distribution, while positive values indicate higher peakedness (leptokurtic) and negative values indicate lower peakedness (platykurtic).
+
+
+
+Certainly! Here's an example of Python code using PyTorch that implements Euler-Maruyama discretization and the Physics-Informed Neural Network (PINN) approach for the stochastic SIR model:
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.autograd import grad
+import numpy as np
+
+# Define the SIR model equations
+def SIR_equations(S, I, R, beta, gamma, N, dW):
+    dS = -beta * S * I / N + np.sqrt(beta * S * I / N) * dW[0]
+    dI = beta * S * I / N - gamma * I + np.sqrt(gamma * I / N) * dW[1]
+    dR = gamma * I + np.sqrt(gamma * I / N) * dW[2]
+    return dS, dI, dR
+
+# Define the Physics-Informed Neural Network (PINN)
+class PINN(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(PINN, self).__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.Tanh(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.Tanh(),
+            nn.Linear(hidden_dim, output_dim)
+        )
+
+    def forward(self, x):
+        return self.layers(x)
+
+# Define the Euler-Maruyama discretization loss
+def euler_maruyama_loss(S, I, R, beta, gamma, N, t):
+    dt = t[1] - t[0]
+    dW = np.random.normal(0, np.sqrt(dt), size=(3,))  # Brownian increments
+    dS, dI, dR = SIR_equations(S, I, R, beta, gamma, N, dW)
+    S_new = S + dt * dS
+    I_new = I + dt * dI
+    R_new = R + dt * dR
+
+    return (S_new - S)**2 + (I_new - I)**2 + (R_new - R)**2
+
+# Set up the training data
+t = np.linspace(0, 1, 100)  # Time grid
+S_init = 990
+I_init = 10
+R_init = 0
+N = S_init + I_init + R_init
+
+# Initialize the PINN model
+input_dim = 1
+hidden_dim = 32
+output_dim = 3
+model = PINN(input_dim, hidden_dim, output_dim)
+
+# Define the optimizer
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Training loop
+for epoch in range(1000):
+    # Generate a random initial condition for each epoch
+    S = torch.tensor([S_init], dtype=torch.float32, requires_grad=True)
+    I = torch.tensor([I_init], dtype=torch.float32, requires_grad=True)
+    R = torch.tensor([R_init], dtype=torch.float32, requires_grad=True)
+
+    optimizer.zero_grad()
+
+    # Evaluate the PINN model
+    input_data = torch.tensor(t[:, np.newaxis], dtype=torch.float32)
+    output_data = model(input_data)
+    S_pred, I_pred, R_pred = torch.split(output_data, 1, dim=1)
+
+    # Compute the Euler-Maruyama loss
+    loss = euler_maruyama_loss(S_pred, I_pred, R_pred, beta, gamma, N, t)
+
+    # Backpropagation and optimization step
+    loss.backward()
+    optimizer.step()
+
+    # Print the loss for monitoring
+    if epoch % 100 == 0:
