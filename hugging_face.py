@@ -66,3 +66,18 @@ results = trainer.evaluate()
 # Print the F1 score
 print("F1 Score:", results['eval_f1_score'])
 
+#BERT
+from transformers import BertTokenizer, TFBertForSequenceClassification
+
+# Load BERT tokenizer and model
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)
+
+#RoBERT
+from transformers import RobertaTokenizer, TFRobertaForSequenceClassification
+
+# Load RoBERTa tokenizer and model
+tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+model = TFRobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=2)
+
+
