@@ -498,3 +498,72 @@ for epoch in range(1000):
 
     # Print the loss for monitoring
     if epoch % 100 == 0:
+
+
+
+
+
+
+
+# Drift Framework
+
+## Overview
+
+Drift Framework is a Python library designed to monitor and detect data drift in production machine learning systems. Data drift refers to the change in the distribution of data over time, which can lead to degrading performance of machine learning models. This framework provides tools to preprocess data, split data, and detect drift in both features and predictions.
+
+## Files
+
+- `data_preprocess.py`: This file contains functions for cleaning and preprocessing the raw data. It includes functionalities like handling missing values, encoding categorical variables, scaling numerical variables, etc.
+
+- `split.py`: This file contains functions to split the data into training and testing sets. It includes functionalities to perform random split, stratified split, and time-based split.
+
+- `drift_framework.py`: This is the core file of the framework which contains functions to detect feature drift and prediction drift. It compares the statistical properties (like mean, variance, distribution) of the current data features and predictions with that of the training data or a reference model.
+
+- `main.py`: This is the entry point of the framework. It orchestrates the execution of other files and provides an interface to run the entire framework.
+
+## Installation
+
+To install the Drift Framework, you can use `pip`:
+
+```
+pip install drift-framework
+```
+
+## Usage
+
+1. Start by importing the necessary modules from the framework.
+
+```python
+from drift_framework import data_preprocess, split, drift_framework
+```
+
+2. Preprocess the data using the `data_preprocess` module.
+
+```python
+preprocessed_data = data_preprocess.preprocess(data)
+```
+
+3. Split the preprocessed data into training and testing sets using the `split` module.
+
+```python
+train_data, test_data = split.split_data(preprocessed_data)
+```
+
+4. Detect data drift using the `drift_framework` module.
+
+```python
+feature_drift, prediction_drift = drift_framework.detect_drift(train_data, test_data)
+```
+
+5. If `feature_drift` or `prediction_drift` is beyond a certain threshold, you may want to retrain your model or investigate further.
+
+## Contributing
+
+We welcome contributions to the Drift Framework! Please see our [contributing guide](CONTRIBUTING.md) for more details on how to contribute.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+
