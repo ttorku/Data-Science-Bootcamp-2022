@@ -1,0 +1,71 @@
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import torch
+
+# Load tokenizer and model
+model_name = "t5-small"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+# Sample data
+business_processes = ["Your list of business processes here..."]
+controls = ["Corresponding controls here..."]
+
+# Tokenize
+inputs = tokenizer(business_processes, truncation=True, padding=True, return_tensors="pt")
+labels = tokenizer(controls, truncation=True, padding=True, return_tensors="pt")
+
+# Dataset
+class BusinessProcessDataset(torch.utils.data.Dataset):
+    # ... (as you provided)
+
+# DataLoader
+from torch.utils.data import DataLoader
+dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+
+
+# Load model and setup training
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+num_epochs = 3
+
+# Training loop
+model.train()
+for epoch in range(num_epochs):
+    total_loss = 0
+    for batch_idx, (input_data, label_data) in enumerate(dataloader):
+        optimizer.zero_grad()
+        outputs = model(**input_data, labels=label_data["input_ids"])
+        loss = outputs.loss
+        total_loss += loss.item()
+        loss.backward()
+        optimizer.step()
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss/len(dataloader)}")
+
+# For BLEU (using sacrebleu as an example)
+import sacrebleu
+
+def compute_bleu(predictions, references):
+    return sacrebleu.corpus_bleu(predictions, [references]).score
+
+# For METEOR (using nltk)
+from nltk.translate.meteor_score import meteor_score
+
+def compute_meteor(predictions, references):
+    scores = [meteor_score([ref], pred) for ref, pred in zip(references, predictions)]
+    return sum(scores) / len(scores)
+
+# Generate predictions and evaluate
+model.eval()
+predictions = []
+actuals = []
+
+with torch.no_grad():
+    for input_data, label_data in dataloader:
+        outputs = model.generate(**input_data)
+        predictions.extend(tokenizer.batch_decode(outputs, skip_special_tokens=True))
+        actuals.extend(tokenizer.batch_decode(label_data["input_ids"], skip_special_tokens=True))
+
+bleu_result = compute_bleu(predictions, actuals)
+meteor_result = compute_meteor(predictions, actuals)
+
+print(f"BLEU Score: {bleu_result:.2f}")
+print(f"METEOR Score: {meteor_result:.4f}")
