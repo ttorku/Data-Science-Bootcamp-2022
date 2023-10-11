@@ -67,5 +67,29 @@ with torch.no_grad():
 bleu_result = compute_bleu(predictions, actuals)
 meteor_result = compute_meteor(predictions, actuals)
 
+
+
+
+
+
+# Define the dataset
+class BusinessProcessDataset(torch.utils.data.Dataset):
+    def __init__(self, inputs, labels):
+        self.inputs = inputs
+        self.labels = labels
+
+    def __getitem__(self, idx):
+        input_data = {key: val[idx] for key, val in self.inputs.items()}
+        label_data = {key: val[idx] for key, val in self.labels.items()}
+        return input_data, label_data
+
+    def __len__(self):
+        return len(self.inputs["input_ids"])
+
+
+
+
+
+
 print(f"BLEU Score: {bleu_result:.2f}")
 print(f"METEOR Score: {meteor_result:.4f}")
