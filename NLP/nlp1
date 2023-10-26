@@ -93,3 +93,40 @@ class BusinessProcessDataset(torch.utils.data.Dataset):
 
 print(f"BLEU Score: {bleu_result:.2f}")
 print(f"METEOR Score: {meteor_result:.4f}")
+
+
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, accuracy_score
+
+# Step 1: Preprocess the Text Data
+# Combining "product_name" and "product_description" into a single text feature for simplicity
+df['text'] = df['product_name'] + " " + df['product_description']
+
+# Step 2: Encode the Target Variable
+df['disclosure'] = df['disclosure'].map({"Yes": 1, "No": 0})
+
+# Step 3: Split the Data
+X_train, X_test, y_train, y_test = train_test_split(df['text'], df['disclosure'], test_size=0.2, random_state=42)
+
+# Step 4: Train the Logistic Regression Model
+pipeline = Pipeline([
+    ('tfidf', TfidfVectorizer()),
+    ('classifier', LogisticRegression(random_state=42))
+])
+pipeline.fit(X_train, y_train)
+
+# Step 5: Evaluate the Model
+predictions = pipeline.predict(X_test)
+accuracy = accuracy_score(y_test, predictions)
+classification_report_output = classification_report(y_test, predictions)
+
+accuracy, classification_report_output
+
+
+
+
