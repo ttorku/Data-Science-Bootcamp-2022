@@ -92,4 +92,63 @@ pip install openpyxl requests pandas PyPDF2
 
 
 
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.pipeline import Pipeline as ImbPipeline
+from xgboost import XGBClassifier
+from sklearn.metrics import classification_report
+
+# Load your dataset
+data = pd.read_csv('your_dataset.csv')
+
+# Assume 'text_column_1' and 'text_column_2' are the names of the columns containing text data
+text_columns = ['text_column_1', 'text_column_2']
+non_text_columns = ['non_text_column_1', 'non_text_column_2']
+
+# Separate the features (X) from the target variable (y)
+X = data.drop(columns=['Disclosure Flag'])
+y = data['Disclosure Flag']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Calculate scale_pos_weight
+scale_pos_weight = len(y_train[y_train == 0]) / len(y_train[y_train == 1])
+
+# Define the resampling strategy
+over_sampler = RandomOverSampler(sampling_strategy=0.5)
+under_sampler = RandomUnderSampler(sampling_strategy=1.0)
+
+# Define the TF-IDF vectorization and preprocessing pipeline
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('text', TfidfVectorizer(), text_columns),
+        ('non_text', 'passthrough', non_text_columns)
+    ]
+)
+
+# Create the full pipeline including resampling and XGBoost classifier
+pipeline = ImbPipeline([
+    ('preprocessor', preprocessor),
+    ('resampling', over_sampler),  # or ('resampling', under_sampler) or both
+    ('classifier', XGBClassifier(scale_pos_weight=scale_pos_weight))
+])
+
+# Train the model on the training data
+pipeline.fit(X_train, y_train)
+
+# Make predictions on the test set
+y_pred = pipeline.predict(X_test)
+
+# Print the classification report
+print(classification_report(y_test, y_pred))
+
+
+
+
 
