@@ -152,3 +152,71 @@ print(classification_report(y_test, y_pred))
 
 
 
+import requests
+from PyPDF2 import PdfReader
+import pandas as pd
+import os
+
+# Function to download PDF from a given URL
+def download_pdf(url, filename):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(filename, 'wb') as f:
+            f.write(response.content)
+        return True
+    except requests.RequestException as e:
+        return False
+
+# Function to extract the abstract from a PDF file
+def extract_abstract_from_pdf(file_path):
+    try:
+        reader = PdfReader(file_path)
+        full_text = "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
+        start_idx = full_text.lower().find("abstract")
+        if start_idx != -1:
+            abstract_text = full_text[start_idx:]
+            words = abstract_text.split()
+            abstract = " ".join(words[:300])  # Limiting to 300 words
+            return abstract
+        else:
+            return "Abstract not found"
+    except Exception as e:
+        return f"Error in extracting abstract: {e}"
+
+# Load CSV data
+csv_file_path = 'path_to_your_csv_file.csv'  # Replace with your CSV file path
+df = pd.read_csv(csv_file_path)
+
+# Directory for downloading PDFs
+pdf_dir = 'path_to_pdf_directory'  # Replace with your desired directory path
+os.makedirs(pdf_dir, exist_ok=True)
+
+# Processing each paper
+abstracts = []
+for index, row in df.iterrows():
+    paper_id = row['Paper ID']
+    url = row['Paper Name (URL links)']
+    pdf_filename = f"{pdf_dir}/{paper_id}.pdf"
+
+    # Download PDF
+    download_success = download_pdf(url, pdf_filename)
+    if download_success:
+        # Extract abstract
+        abstract = extract_abstract_from_pdf(pdf_filename)
+    else:
+        abstract = "Failed to download PDF"
+
+    abstracts.append(abstract)
+
+# Add abstracts to the DataFrame
+df['Abstract'] = abstracts
+
+# Save updated DataFrame to CSV
+df.to_csv('path_to_updated_csv_file.csv', index=False)  # Replace with your desired output CSV file path
+
+
+
+
+
+
