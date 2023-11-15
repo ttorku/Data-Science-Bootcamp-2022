@@ -1,3 +1,25 @@
+import os
+
+# Example folder path where PDFs are stored
+folder_path = '/path/to/your/pdf/folder'  # Replace with your actual folder path
+
+# List to hold the extracted names
+pdf_names = []
+
+# Iterate over the files in the folder
+for filename in os.listdir(folder_path):
+    if filename.endswith('.pdf') and filename.startswith('psr_'):
+        # Extract the name without extension
+        name = filename.rsplit('.', 1)[0]
+        pdf_names.append(name)
+
+pdf_names
+
+
+
+
+
+
 # List with content
 content_list = ["1. summary\n This is my legal frame.\n Governments want to stop illegality."]
 
