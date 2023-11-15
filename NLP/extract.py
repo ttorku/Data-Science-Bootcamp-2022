@@ -1,3 +1,24 @@
+# List with content
+content_list = ["1. summary\n This is my legal frame.\n Governments want to stop illegality."]
+
+# Function to process each string in the list
+def process_content(content):
+    # Check if the string starts with "1. summary\n" and remove it
+    if content.startswith("1. summary\n"):
+        content = content.replace("1. summary\n", "")
+    # Replace other '\n' with space
+    return content.replace("\n", " ")
+
+# Apply the function to each element in the list
+processed_list = [process_content(content) for content in content_list]
+
+processed_list
+
+
+
+
+
+
 import requests
 from io import BytesIO
 
