@@ -129,5 +129,25 @@ for name, report in evaluation_results.items():
 summary
 
 
+# Creating out-of-sample data for prediction
+np.random.seed(1)
+out_of_sample_descriptions = [np.random.choice(example_descriptions) for _ in range(20)]
+out_of_sample_data = pd.DataFrame({
+    'Product Description': out_of_sample_descriptions
+})
+
+# Transforming the out-of-sample data for model input
+X_out_of_sample = vectorizer.transform(out_of_sample_data['Product Description']).toarray()
+
+# Predicting using each classifier
+out_of_sample_predictions = {}
+for name, clf in classifiers.items():
+    predictions = clf.predict(X_out_of_sample)
+    out_of_sample_predictions[name] = label_encoder.inverse_transform(predictions)
+
+out_of_sample_data['Predictions'] = out_of_sample_predictions
+out_of_sample_data
+
+
 
 
