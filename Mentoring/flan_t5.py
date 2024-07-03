@@ -1,7 +1,7 @@
 # Filename: flan_t5_fine_tuning.py
 
 import pandas as pd
-from transformers import T5ForConditionalGeneration, T5Tokenizer, Trainer, TrainingArguments
+from transformers import T5ForConditionalGeneration, T5Tokenizer, Trainer, TrainingArguments, DataCollatorForSeq2Seq
 from rouge_score import rouge_scorer
 import sacrebleu
 import torch
@@ -83,6 +83,7 @@ class FineTuneDataset(torch.utils.data.Dataset):
 
 # Create dataset and data collator
 train_dataset = FineTuneDataset(chunked_df_flan_t5, tokenizer, max_length=512)
+data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
 # Define training arguments
 training_args = TrainingArguments(
@@ -100,6 +101,7 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
+    data_collator=data_collator,
 )
 
 # Fine-tune the model
@@ -107,7 +109,7 @@ trainer.train()
 
 # Function to generate control descriptions
 def generate_control_description(input_text):
-    inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
+    inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
     output_sequences = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], max_length=512)
     generated_text = tokenizer.decode(output_sequences[0], skip_special_tokens=True)
     return generated_text
