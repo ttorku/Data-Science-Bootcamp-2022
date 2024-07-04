@@ -107,12 +107,18 @@ trainer = Trainer(
 # Fine-tune the model
 trainer.train()
 
-# Function to generate control descriptions
+# Function to generate control descriptions with chunking
 def generate_control_description(input_text):
-    inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
-    output_sequences = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], max_length=512)
-    generated_text = tokenizer.decode(output_sequences[0], skip_special_tokens=True)
-    return generated_text
+    input_chunks = split_into_chunks(input_text, 512)
+    generated_chunks = []
+    
+    for chunk in input_chunks:
+        inputs = tokenizer(chunk, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
+        output_sequences = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], max_length=512)
+        generated_text = tokenizer.decode(output_sequences[0], skip_special_tokens=True)
+        generated_chunks.append(generated_text)
+    
+    return ' '.join(generated_chunks)
 
 # Evaluation metrics
 def evaluate_model(model, tokenizer, test_df):
