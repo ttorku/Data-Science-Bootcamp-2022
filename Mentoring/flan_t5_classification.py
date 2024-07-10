@@ -85,14 +85,20 @@ for epoch in range(3):  # Train for 3 epochs
 # Prepare the model for evaluation
 model.eval()
 
-# Function to classify and get probability
 def classify_product_with_prob(product_name, product_desc):
     input_text = f"product_name: {product_name} product_desc: {product_desc}"
     input_ids = tokenizer(input_text, return_tensors="pt").input_ids
-    outputs = model.generate(input_ids)
-    logits = model(input_ids).logits
-    probs = torch.nn.functional.softmax(logits, dim=-1)
+    outputs = model.generate(input_ids, decoder_start_token_id=tokenizer.pad_token_id)
     prediction = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    # Prepare decoder input IDs for the forward pass to get logits
+    decoder_input_ids = torch.tensor([[model.config.decoder_start_token_id]])
+    
+    # Get logits from the model directly
+    outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
+    logits = outputs.logits
+    probs = torch.nn.functional.softmax(logits, dim=-1)
+    
     return prediction, probs
 
 # Evaluate on the same dataset for simplicity
