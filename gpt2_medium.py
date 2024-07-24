@@ -81,6 +81,31 @@ trainer.save_model("./fine-tuned-gpt2-medium")
 results = trainer.evaluate()
 print(results)
 
+# Create a pipeline for text generation
+text_generator = pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    device=0  # Use GPU if available, -1 for CPU
+)
+
+# Example inference with temperature
+def generate_control(process, risk, temperature=0.7, max_length=512, num_return_sequences=1):
+    input_text = f"Process: {process}\nRisk: {risk}\nControl:"
+    generated_texts = text_generator(
+        input_text,
+        max_length=max_length,
+        temperature=temperature,
+        num_return_sequences=num_return_sequences,
+        pad_token_id=tokenizer.eos_token_id
+    )
+    generated_control = [text['generated_text'].split('Control:')[-1].strip() for text in generated_texts]
+    return generated_control[0]
+
+
+
+
+
 # Example inference
 def generate_control(process, risk):
     input_text = f"Process: {process}\nRisk: {risk} <sep>"
