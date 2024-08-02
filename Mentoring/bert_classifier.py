@@ -120,3 +120,67 @@ prediction = predict(model, new_process_name, new_process_desc, tokenizer)
 print(f"Prediction for Dept A: {'Yes' if prediction[0][0] == 1 else 'No'}")
 print(f"Prediction for Dept B: {'Yes' if prediction[0][1] == 1 else 'No'}")
 print(f"Prediction for Dept C: {'Yes' if prediction[0][2] == 1 else 'No'}")
+
+
+
+
+
+import pandas as pd
+
+def predict(model, df, tokenizer, max_len=128):
+    results = []
+
+    for idx, row in df.iterrows():
+        process_id = row['Process ID']
+        process_name = row['Process Name']
+        process_desc = row['Process Description']
+
+        inputs = tokenizer.encode_plus(
+            process_name, 
+            process_desc, 
+            add_special_tokens=True, 
+            max_length=max_len,
+            padding='max_length', 
+            truncation=True, 
+            return_tensors='pt'
+        )
+        input_ids = inputs['input_ids'].to(device)
+        attention_mask = inputs['attention_mask'].to(device)
+        
+        with torch.no_grad():
+            outputs = model(input_ids, attention_mask=attention_mask)
+        
+        logits = outputs.logits
+        preds = torch.sigmoid(logits).cpu().numpy()
+        
+        dept_A_score = preds[0][0]
+        dept_B_score = preds[0][1]
+        dept_C_score = preds[0][2]
+        
+        dept_A_applicability = f"Yes ({dept_A_score:.2f})" if dept_A_score > 0.5 else f"No ({dept_A_score:.2f})"
+        dept_B_applicability = f"Yes ({dept_B_score:.2f})" if dept_B_score > 0.5 else f"No ({dept_B_score:.2f})"
+        dept_C_applicability = f"Yes ({dept_C_score:.2f})" if dept_C_score > 0.5 else f"No ({dept_C_score:.2f})"
+        
+        results.append({
+            'Process ID': process_id,
+            'Process Name': process_name,
+            'Process Description': process_desc,
+            'Dept A Applicability': dept_A_applicability,
+            'Dept B Applicability': dept_B_applicability,
+            'Dept C Applicability': dept_C_applicability
+        })
+
+    return pd.DataFrame(results)
+
+# Example usage
+test_df = pd.DataFrame({
+    'Process ID': [1, 2],
+    'Process Name': ["New Process 1", "New Process 2"],
+    'Process Description': ["Description of the first new process", "Description of the second new process"]
+})
+
+prediction_df = predict(model, test_df, tokenizer)
+print(prediction_df)
+
+
+
