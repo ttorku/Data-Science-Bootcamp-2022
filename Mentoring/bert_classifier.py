@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 import numpy as np
+import time
 from transformers import BertTokenizer, BertModel
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from sklearn.model_selection import train_test_split
@@ -85,6 +86,9 @@ model.to(device)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
+# Start timing the training process
+start_time = time.time()
+
 for epoch in range(3):  # number of epochs
     model.train()
     total_loss = 0
@@ -125,6 +129,11 @@ for epoch in range(3):  # number of epochs
     precision, recall, f1, _ = precision_recall_fscore_support(val_labels, val_preds, average='samples')
     
     print(f'Epoch {epoch + 1} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}')
+
+# End timing the training process
+end_time = time.time()
+total_training_time = end_time - start_time
+print(f"Total Training Time: {total_training_time:.2f} seconds")
 
 # Step 4: Make Predictions
 def predict(model, df, tokenizer, max_len=128):
