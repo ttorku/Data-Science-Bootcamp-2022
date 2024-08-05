@@ -1,9 +1,33 @@
 import pandas as pd
 import torch
-from transformers import BertTokenizer, BertForSequenceClassification
+import numpy as np
+from transformers import BertTokenizer, BertModel
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from torch import nn
+
+# Custom BERT model for multi-label classification
+class BertForMultiLabelClassification(nn.Module):
+    def __init__(self, model_name, num_labels):
+        super(BertForMultiLabelClassification, self).__init__()
+        self.bert = BertModel.from_pretrained(model_name)
+        self.dropout = nn.Dropout(0.3)
+        self.classifier = nn.Linear(self.bert.config.hidden_size, num_labels)
+        nn.init.xavier_uniform_(self.classifier.weight)  # Initialize the classifier layer weights
+
+    def forward(self, input_ids, attention_mask, labels=None):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output = outputs[1]
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.BCEWithLogitsLoss()
+            loss = loss_fct(logits, labels)
+
+        return loss, logits
 
 # Step 1: Prepare Data
 class ProcessDataset(Dataset):
@@ -52,7 +76,8 @@ train_loader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset), b
 val_loader = DataLoader(val_dataset, sampler=SequentialSampler(val_dataset), batch_size=8)
 
 # Step 2: Build the Model
-model = BertForSequenceClassification.from_pretrained('bert-large-uncased', num_labels=3)
+num_labels = 3  # Number of labels for multi-label classification
+model = BertForMultiLabelClassification('bert-large-uncased', num_labels)
 
 # Step 3: Train the Model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -62,41 +87,46 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
 for epoch in range(3):  # number of epochs
     model.train()
-    for batch in train_loader:
+    total_loss = 0
+    for step, batch in enumerate(train_loader):
         optimizer.zero_grad()
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
         labels = batch['labels'].to(device)
-        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
-        loss = outputs.loss
+        loss, logits = model(input_ids, attention_mask, labels=labels)
         loss.backward()
         optimizer.step()
+        total_loss += loss.item()
+        if step % 50 == 0 and step != 0:
+            print(f"Epoch {epoch+1}, Step {step}, Loss: {loss.item()}")
+
+    avg_train_loss = total_loss / len(train_loader)
 
     # Evaluation
     model.eval()
     val_preds = []
     val_labels = []
+    val_loss = 0
     with torch.no_grad():
         for batch in val_loader:
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
             labels = batch['labels'].to(device)
-            outputs = model(input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
+            loss, logits = model(input_ids, attention_mask, labels=labels)
+            val_loss += loss.item()
             val_preds.extend(torch.sigmoid(logits).cpu().numpy())
             val_labels.extend(labels.cpu().numpy())
 
+    avg_val_loss = val_loss / len(val_loader)
     val_preds = (np.array(val_preds) > 0.5).astype(int)
     val_labels = np.array(val_labels)
     
     accuracy = accuracy_score(val_labels, val_preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(val_labels, val_preds, average='micro')
+    precision, recall, f1, _ = precision_recall_fscore_support(val_labels, val_preds, average='samples')
     
-    print(f'Epoch {epoch + 1} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}')
+    print(f'Epoch {epoch + 1} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}')
 
 # Step 4: Make Predictions
-import pandas as pd
-
 def predict(model, df, tokenizer, max_len=128):
     results = []
 
@@ -118,9 +148,8 @@ def predict(model, df, tokenizer, max_len=128):
         attention_mask = inputs['attention_mask'].to(device)
         
         with torch.no_grad():
-            outputs = model(input_ids, attention_mask=attention_mask)
+            _, logits = model(input_ids, attention_mask=attention_mask)
         
-        logits = outputs.logits
         preds = torch.sigmoid(logits).cpu().numpy()
         
         dept_A_score = preds[0][0]
@@ -151,6 +180,3 @@ test_df = pd.DataFrame({
 
 prediction_df = predict(model, test_df, tokenizer)
 print(prediction_df)
-
-
-
