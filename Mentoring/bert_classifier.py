@@ -25,7 +25,7 @@ class BertForMultiLabelClassification(nn.Module):
 
         loss = None
         if labels is not None:
-            pos_weight = torch.tensor([2.0, 2.0, 2.0]).to(device)  # Adjust pos_weight for each class if needed
+            pos_weight = torch.ones(labels.size(1)).to(device)  # Adjust pos_weight for each class if needed
             loss_fct = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
             loss = loss_fct(logits, labels)
 
@@ -55,7 +55,7 @@ class ProcessDataset(Dataset):
         )
         input_ids = inputs['input_ids'].squeeze()
         attention_mask = inputs['attention_mask'].squeeze()
-        labels = torch.tensor(self.df.iloc[idx][['dept_A', 'dept_B', 'dept_C']].values, dtype=torch.float)
+        labels = torch.tensor(self.df.iloc[idx][['dept_1', 'dept_2', 'dept_3', 'dept_4', 'dept_5', 'dept_6', 'dept_7', 'dept_8', 'dept_9', 'dept_10', 'dept_11', 'dept_12', 'dept_13']].values, dtype=torch.float)
         return {
             'input_ids': input_ids,
             'attention_mask': attention_mask,
@@ -63,7 +63,7 @@ class ProcessDataset(Dataset):
         }
 
 # Load data
-df = pd.read_csv('process_data.csv')  # assuming a CSV file with process_name, process_desc, dept_A, dept_B, dept_C
+df = pd.read_csv('process_data.csv')  # assuming a CSV file with process_name, process_desc, and 13 department columns
 
 # Split data into train and test sets
 train_df, val_df = train_test_split(df, test_size=0.2, random_state=42)
@@ -78,14 +78,18 @@ train_loader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset), b
 val_loader = DataLoader(val_dataset, sampler=SequentialSampler(val_dataset), batch_size=8)
 
 # Step 2: Build the Model
-num_labels = 3  # Number of labels for multi-label classification
+num_labels = 13  # Number of labels for multi-label classification
 model = BertForMultiLabelClassification('bert-large-uncased', num_labels)
 
 # Step 3: Train the Model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+# Lower learning rate
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+
+# Gradient clipping value
+max_grad_norm = 1.0
 
 # Start timing the training process
 start_time = time.time()
@@ -99,7 +103,17 @@ for epoch in range(3):  # number of epochs
         attention_mask = batch['attention_mask'].to(device)
         labels = batch['labels'].to(device)
         loss, logits = model(input_ids, attention_mask, labels=labels)
+        
+        # Check for NaN loss
+        if torch.isnan(loss).any():
+            print(f"NaN loss encountered at epoch {epoch+1}, step {step}")
+            continue
+
         loss.backward()
+
+        # Gradient clipping
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+
         optimizer.step()
         total_loss += loss.item()
         if step % 50 == 0 and step != 0:
@@ -145,7 +159,7 @@ torch.save(model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")
 
 # Function to load the model
-def load_model(model_path, model_name='bert-large-uncased', num_labels=3):
+def load_model(model_path, model_name='bert-large-uncased', num_labels=13):
     model = BertForMultiLabelClassification(model_name, num_labels)
     model.load_state_dict(torch.load(model_path))
     model.to(device)
@@ -158,7 +172,7 @@ def predict(model, df, tokenizer, max_len=128, threshold=0.3):
     for idx, row in df.iterrows():
         process_id = row['Process ID']
         process_name = row['Process Name']
-                process_desc = row['Process Description']
+        process_desc = row['Process Description']
 
         inputs = tokenizer.encode_plus(
             process_name, 
@@ -177,21 +191,23 @@ def predict(model, df, tokenizer, max_len=128, threshold=0.3):
         
         preds = torch.sigmoid(logits).cpu().numpy()
         
-        dept_A_score = preds[0][0]
-        dept_B_score = preds[0][1]
-        dept_C_score = preds[0][2]
-        
-        dept_A_applicability = f"Yes ({dept_A_score:.2f})" if dept_A_score > threshold else f"No ({dept_A_score:.2f})"
-        dept_B_applicability = f"Yes ({dept_B_score:.2f})" if dept_B_score > threshold else f"No ({dept_B_score:.2f})"
-        dept_C_applicability = f"Yes ({dept_C_score:.2f})" if dept_C_score > threshold else f"No ({dept_C_score:.2f})"
-        
         results.append({
             'Process ID': process_id,
             'Process Name': process_name,
             'Process Description': process_desc,
-            'Dept A Applicability': dept_A_applicability,
-            'Dept B Applicability': dept_B_applicability,
-            'Dept C Applicability': dept_C_applicability
+            'Dept 1 Applicability': f"Yes ({preds[0][0]:.2f})" if preds[0][0] > threshold else f"No ({preds[0][0]:.2f})",
+                        'Dept 2 Applicability': f"Yes ({preds[0][1]:.2f})" if preds[0][1] > threshold else f"No ({preds[0][1]:.2f})",
+            'Dept 3 Applicability': f"Yes ({preds[0][2]:.2f})" if preds[0][2] > threshold else f"No ({preds[0][2]:.2f})",
+            'Dept 4 Applicability': f"Yes ({preds[0][3]:.2f})" if preds[0][3] > threshold else f"No ({preds[0][3]:.2f})",
+            'Dept 5 Applicability': f"Yes ({preds[0][4]:.2f})" if preds[0][4] > threshold else f"No ({preds[0][4]:.2f})",
+            'Dept 6 Applicability': f"Yes ({preds[0][5]:.2f})" if preds[0][5] > threshold else f"No ({preds[0][5]:.2f})",
+            'Dept 7 Applicability': f"Yes ({preds[0][6]:.2f})" if preds[0][6] > threshold else f"No ({preds[0][6]:.2f})",
+            'Dept 8 Applicability': f"Yes ({preds[0][7]:.2f})" if preds[0][7] > threshold else f"No ({preds[0][7]:.2f})",
+            'Dept 9 Applicability': f"Yes ({preds[0][8]:.2f})" if preds[0][8] > threshold else f"No ({preds[0][8]:.2f})",
+            'Dept 10 Applicability': f"Yes ({preds[0][9]:.2f})" if preds[0][9] > threshold else f"No ({preds[0][9]:.2f})",
+            'Dept 11 Applicability': f"Yes ({preds[0][10]:.2f})" if preds[0][10] > threshold else f"No ({preds[0][10]:.2f})",
+            'Dept 12 Applicability': f"Yes ({preds[0][11]:.2f})" if preds[0][11] > threshold else f"No ({preds[0][11]:.2f})",
+            'Dept 13 Applicability': f"Yes ({preds[0][12]:.2f})" if preds[0][12] > threshold else f"No ({preds[0][12]:.2f})",
         })
 
     return pd.DataFrame(results)
@@ -209,4 +225,3 @@ test_df = pd.DataFrame({
 prediction_df = predict(loaded_model, test_df, tokenizer)
 print(prediction_df)
 
-        
