@@ -95,36 +95,6 @@ for epoch in range(3):  # number of epochs
     print(f'Epoch {epoch + 1} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}')
 
 # Step 4: Make Predictions
-def predict(model, process_name, process_desc, tokenizer, max_len=128):
-    inputs = tokenizer.encode_plus(
-        process_name, 
-        process_desc, 
-        add_special_tokens=True, 
-        max_length=max_len,
-        padding='max_length', 
-        truncation=True, 
-        return_tensors='pt'
-    )
-    input_ids = inputs['input_ids'].to(device)
-    attention_mask = inputs['attention_mask'].to(device)
-    with torch.no_grad():
-        outputs = model(input_ids, attention_mask=attention_mask)
-    logits = outputs.logits
-    preds = torch.sigmoid(logits).cpu().numpy()
-    return (preds > 0.5).astype(int)
-
-# Example prediction
-new_process_name = "New Process Name"
-new_process_desc = "Description of the new process"
-prediction = predict(model, new_process_name, new_process_desc, tokenizer)
-print(f"Prediction for Dept A: {'Yes' if prediction[0][0] == 1 else 'No'}")
-print(f"Prediction for Dept B: {'Yes' if prediction[0][1] == 1 else 'No'}")
-print(f"Prediction for Dept C: {'Yes' if prediction[0][2] == 1 else 'No'}")
-
-
-
-
-
 import pandas as pd
 
 def predict(model, df, tokenizer, max_len=128):
