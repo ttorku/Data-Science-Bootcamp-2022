@@ -25,7 +25,8 @@ class BertForMultiLabelClassification(nn.Module):
 
         loss = None
         if labels is not None:
-            loss_fct = nn.BCEWithLogitsLoss()
+            pos_weight = torch.tensor([2.0, 2.0, 2.0]).to(device)  # Adjust pos_weight for each class if needed
+            loss_fct = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
             loss = loss_fct(logits, labels)
 
         return loss, logits
@@ -122,11 +123,14 @@ for epoch in range(3):  # number of epochs
             val_labels.extend(labels.cpu().numpy())
 
     avg_val_loss = val_loss / len(val_loader)
-    val_preds = (np.array(val_preds) > 0.5).astype(int)
+    
+    # Adjust threshold here
+    threshold = 0.3
+    val_preds = (np.array(val_preds) > threshold).astype(int)
     val_labels = np.array(val_labels)
     
     accuracy = accuracy_score(val_labels, val_preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(val_labels, val_preds, average='samples')
+    precision, recall, f1, _ = precision_recall_fscore_support(val_labels, val_preds, average='samples', zero_division=1)
     
     print(f'Epoch {epoch + 1} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}')
 
@@ -135,14 +139,26 @@ end_time = time.time()
 total_training_time = end_time - start_time
 print(f"Total Training Time: {total_training_time:.2f} seconds")
 
+# Save the trained model
+model_save_path = 'bert_multilabel_model.pt'
+torch.save(model.state_dict(), model_save_path)
+print(f"Model saved to {model_save_path}")
+
+# Function to load the model
+def load_model(model_path, model_name='bert-large-uncased', num_labels=3):
+    model = BertForMultiLabelClassification(model_name, num_labels)
+    model.load_state_dict(torch.load(model_path))
+    model.to(device)
+    return model
+
 # Step 4: Make Predictions
-def predict(model, df, tokenizer, max_len=128):
+def predict(model, df, tokenizer, max_len=128, threshold=0.3):
     results = []
 
     for idx, row in df.iterrows():
         process_id = row['Process ID']
         process_name = row['Process Name']
-        process_desc = row['Process Description']
+                process_desc = row['Process Description']
 
         inputs = tokenizer.encode_plus(
             process_name, 
@@ -165,9 +181,9 @@ def predict(model, df, tokenizer, max_len=128):
         dept_B_score = preds[0][1]
         dept_C_score = preds[0][2]
         
-        dept_A_applicability = f"Yes ({dept_A_score:.2f})" if dept_A_score > 0.5 else f"No ({dept_A_score:.2f})"
-        dept_B_applicability = f"Yes ({dept_B_score:.2f})" if dept_B_score > 0.5 else f"No ({dept_B_score:.2f})"
-        dept_C_applicability = f"Yes ({dept_C_score:.2f})" if dept_C_score > 0.5 else f"No ({dept_C_score:.2f})"
+        dept_A_applicability = f"Yes ({dept_A_score:.2f})" if dept_A_score > threshold else f"No ({dept_A_score:.2f})"
+        dept_B_applicability = f"Yes ({dept_B_score:.2f})" if dept_B_score > threshold else f"No ({dept_B_score:.2f})"
+        dept_C_applicability = f"Yes ({dept_C_score:.2f})" if dept_C_score > threshold else f"No ({dept_C_score:.2f})"
         
         results.append({
             'Process ID': process_id,
@@ -180,6 +196,9 @@ def predict(model, df, tokenizer, max_len=128):
 
     return pd.DataFrame(results)
 
+# Load the model for inference
+loaded_model = load_model(model_save_path)
+
 # Example usage
 test_df = pd.DataFrame({
     'Process ID': [1, 2],
@@ -187,5 +206,7 @@ test_df = pd.DataFrame({
     'Process Description': ["Description of the first new process", "Description of the second new process"]
 })
 
-prediction_df = predict(model, test_df, tokenizer)
+prediction_df = predict(loaded_model, test_df, tokenizer)
 print(prediction_df)
+
+        
