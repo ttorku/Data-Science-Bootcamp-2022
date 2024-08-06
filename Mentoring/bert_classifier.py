@@ -158,6 +158,18 @@ model_save_path = 'bert_multilabel_model.pt'
 torch.save(model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")
 
+# Save metrics to a text file
+metrics_save_path = 'training_metrics.txt'
+with open(metrics_save_path, 'w') as f:
+    f.write(f"Final Train Loss: {final_train_loss:.4f}\n")
+    f.write(f"Final Validation Loss: {final_val_loss:.4f}\n")
+    f.write(f"Final Accuracy: {final_accuracy:.4f}\n")
+    f.write(f"Final Precision: {final_precision:.4f}\n")
+    f.write(f"Final Recall: {final_recall:.4f}\n")
+    f.write(f"Final F1 Score: {final_f1:.4f}\n")
+    f.write(f"Total Training Time: {total_training_time:.2f} seconds\n")
+print(f"Metrics saved to {metrics_save_path}")
+
 # Function to load the model
 def load_model(model_path, model_name='bert-large-uncased', num_labels=13):
     model = BertForMultiLabelClassification(model_name, num_labels)
