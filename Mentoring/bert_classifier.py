@@ -153,13 +153,18 @@ end_time = time.time()
 total_training_time = end_time - start_time
 print(f"Total Training Time: {total_training_time:.2f} seconds")
 
+# Create directory for saving model and metrics
+save_dir = 'model_and_metrics'
+if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
+
 # Save the trained model
-model_save_path = 'bert_multilabel_model.pt'
+model_save_path = os.path.join(save_dir, 'bert_multilabel_model.pt')
 torch.save(model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")
 
 # Save metrics to a text file
-metrics_save_path = 'training_metrics.txt'
+metrics_save_path = os.path.join(save_dir, 'training_metrics.txt')
 with open(metrics_save_path, 'w') as f:
     f.write(f"Final Train Loss: {final_train_loss:.4f}\n")
     f.write(f"Final Validation Loss: {final_val_loss:.4f}\n")
