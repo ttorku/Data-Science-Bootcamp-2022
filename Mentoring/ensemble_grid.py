@@ -9,10 +9,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.pipeline import make_pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import VotingClassifier
 import joblib
 
@@ -56,7 +52,7 @@ def extract_embeddings(dataloader, model, device):
         for batch in dataloader:
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
-            outputs = model.bert(input_ids=input_ids, attention_mask=attention_mask)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             pooled_output = outputs[1]
             embeddings.append(pooled_output.cpu().numpy())
             labels.append(batch['labels'].cpu().numpy())
@@ -66,8 +62,7 @@ def extract_embeddings(dataloader, model, device):
 
 # Class for training, prediction, and saving models
 class EnsembleModelTrainer:
-    def __init__(self, model_type):
-        self.model_type = model_type
+    def __init__(self):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased')
         self.bert_model = BertModel.from_pretrained('bert-large-uncased')
@@ -100,32 +95,43 @@ class EnsembleModelTrainer:
         labels = np.vstack(labels)
         return embeddings, labels
 
-    def train_model(self):
+    def grid_search_models(self):
         self.train_embeddings, self.train_labels = self.extract_embeddings(self.train_loader)
         self.val_embeddings, self.val_labels = self.extract_embeddings(self.val_loader)
         self.train_labels = self.train_labels.astype(int)
         self.val_labels = self.val_labels.astype(int)
 
-        if self.model_type == 'lr':
-            model = LogisticRegression(max_iter=1000)
-            param_grid = {'C': [0.1, 1, 10]}
-        elif self.model_type == 'rf':
-            model = RandomForestClassifier(n_estimators=100)
-            param_grid = {'n_estimators': [100, 200], 'max_depth': [None, 10, 20]}
-        elif self.model_type == 'xgb':
-            model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
-            param_grid = {'n_estimators': [100, 200], 'max_depth': [3, 6, 10]}
-        else:
-            raise ValueError("Invalid model type. Choose from 'lr', 'rf', 'xgb'.")
+        param_grid_lr = {'C': [0.1, 1, 10]}
+        param_grid_rf = {'n_estimators': [100, 200], 'max_depth': [None, 10, 20]}
+        param_grid_xgb = {'n_estimators': [100, 200], 'max_depth': [3, 6, 10]}
 
-        grid_search = GridSearchCV(estimator=model, param_grid=param_grid, scoring='f1_samples', cv=3, verbose=1, n_jobs=-1)
-        grid_search.fit(self.train_embeddings, self.train_labels)
-        self.model = grid_search.best_estimator_
-        self.best_params = grid_search.best_params_
+        lr = GridSearchCV(LogisticRegression(max_iter=1000), param_grid_lr, scoring='f1_samples', cv=3, verbose=1, n_jobs=-1)
+        rf = GridSearchCV(RandomForestClassifier(), param_grid_rf, scoring='f1_samples', cv=3, verbose=1, n_jobs=-1)
+        xgb = GridSearchCV(XGBClassifier(use_label_encoder=False, eval_metric='mlogloss'), param_grid_xgb, scoring='f1_samples', cv=3, verbose=1, n_jobs=-1)
+
+        lr.fit(self.train_embeddings, self.train_labels)
+        rf.fit(self.train_embeddings, self.train_labels)
+        xgb.fit(self.train_embeddings, self.train_labels)
+
+        self.best_lr = lr.best_estimator_
+        self.best_rf = rf.best_estimator_
+        self.best_xgb = xgb.best_estimator_
+
+        print("Best Params LR: ", lr.best_params_)
+        print("Best Params RF: ", rf.best_params_)
+        print("Best Params XGB: ", xgb.best_params_)
+
+        self.ensemble_model = VotingClassifier(estimators=[
+            ('lr', self.best_lr),
+            ('rf', self.best_rf),
+            ('xgb', self.best_xgb)
+        ], voting='soft')
+
+        self.ensemble_model.fit(self.train_embeddings, self.train_labels)
         self.evaluate_model()
 
     def evaluate_model(self):
-        val_preds = self.model.predict(self.val_embeddings)
+        val_preds = self.ensemble_model.predict(self.val_embeddings)
         accuracy = accuracy_score(self.val_labels, val_preds)
         precision, recall, f1, _ = precision_recall_fscore_support(self.val_labels, val_preds, average='samples', zero_division=1)
         self.metrics = {
@@ -134,23 +140,21 @@ class EnsembleModelTrainer:
             'recall': recall,
             'f1': f1
         }
-        print(f"Model: {self.model_type} | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}")
-        print(f"Best Params: {self.best_params}")
+        print(f"Ensemble Model | Accuracy: {accuracy:.4f} | Precision: {precision:.4f} | Recall: {recall:.4f} | F1 Score: {f1:.4f}")
 
     def save_model_and_metrics(self):
-        save_dir = f'{self.model_type}_model_and_metrics'
+        save_dir = 'ensemble_model_and_metrics'
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        model_save_path = os.path.join(save_dir, f'{self.model_type}_model.pkl')
-        metrics_save_path = os.path.join(save_dir, f'{self.model_type}_metrics.txt')
+        model_save_path = os.path.join(save_dir, 'ensemble_model.pkl')
+        metrics_save_path = os.path.join(save_dir, 'ensemble_metrics.txt')
 
-        joblib.dump(self.model, model_save_path)
-        print(f"Model saved to {model_save_path}")
+        joblib.dump(self.ensemble_model, model_save_path)
+        print(f"Ensemble model saved to {model_save_path}")
 
         with open(metrics_save_path, 'w') as f:
             for key, value in self.metrics.items():
                 f.write(f"{key.capitalize()}: {value:.4f}\n")
-            f.write(f"Best Params: {self.best_params}\n")
         print(f"Metrics saved to {metrics_save_path}")
 
     def predict(self, test_df):
@@ -158,7 +162,7 @@ class EnsembleModelTrainer:
         test_loader = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=8)
         test_embeddings, _ = self.extract_embeddings(test_loader)
 
-        test_preds = self.model.predict(test_embeddings)
+        test_preds = self.ensemble_model.predict(test_embeddings)
         results = []
         for idx, row in test_df.iterrows():
             process_id = row['Process ID']
@@ -177,13 +181,13 @@ class EnsembleModelTrainer:
 
 # Usage example:
 if __name__ == '__main__':
-    model_type = input("Enter model type (lr, rf, xgb): ").strip().lower()
-    trainer = EnsembleModelTrainer(model_type)
+    trainer = EnsembleModelTrainer()
     trainer.load_data('process_data.csv')
-    trainer.train_model()
+    trainer.grid_search_models()
     trainer.save_model_and_metrics()
 
     # Example prediction
+    # test_df = pd.DataFrame
     test_df = pd.DataFrame({
         'Process ID': [1, 2],
         'Process Name': ["New Process 1", "New Process 2"],
