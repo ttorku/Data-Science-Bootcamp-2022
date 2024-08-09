@@ -194,5 +194,47 @@ def predict(self, test_df):
             result[f'Dept {i+1} Applicability'] = f"{applicability} ({prob:.2f})"
         results.append(result)
 
+def predict(self, test_df):
+    test_dataset = ProcessDataset(test_df, self.tokenizer, max_len=128)
+    test_loader = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=8)
+    test_embeddings, _ = self.extract_embeddings(test_loader)
+
+    # Get predicted probabilities for each department (13 in this case)
+    test_probs = self.model.predict_proba(test_embeddings)
+
+    # Define actual department names in a list
+    department_names = ['HR', 'Finance', 'IT', 'Marketing', 'Sales', 'Support', 'Operations', 'Legal', 'R&D', 'Product', 'Engineering', 'Customer Service', 'Admin']
+
+    # Debugging: Print the structure of test_probs
+    print("test_probs structure:", len(test_probs), [arr.shape for arr in test_probs])
+
+    results = []
+    for idx, row in test_df.iterrows():
+        process_id = row['Process ID']
+        process_name = row['Process Name']
+        process_desc = row['Process Description']
+        result = {
+            'Process ID': process_id,
+            'Process Name': process_name,
+            'Process Description': process_desc,
+        }
+        # Iterate over the department names
+        for i, dept_name in enumerate(department_names):
+            # Debugging: Print the current department and index
+            print(f"Processing {dept_name} at index {i} for sample {idx}")
+            
+            try:
+                prob = test_probs[i][idx] if isinstance(test_probs[i], np.ndarray) else test_probs[i].item()
+            except KeyError as e:
+                print(f"KeyError: {e} for department {dept_name} at index {i}")
+                continue
+
+            applicability = "Yes" if prob > 0.5 else "No"
+            result[f'{dept_name} Applicability'] = f"{applicability} ({prob:.2f})"
+        results.append(result)
+
+    return pd.DataFrame(results)
+
+
     return pd.DataFrame(results)
 
