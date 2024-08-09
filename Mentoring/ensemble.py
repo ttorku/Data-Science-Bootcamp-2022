@@ -169,3 +169,30 @@ if __name__ == '__main__':
     })
     predictions = trainer.predict(test_df)
     print(predictions)
+
+def predict(self, test_df):
+    test_dataset = ProcessDataset(test_df, self.tokenizer, max_len=128)
+    test_loader = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=8)
+    test_embeddings, _ = self.extract_embeddings(test_loader)
+
+    # Get predicted probabilities
+    test_probs = self.model.predict_proba(test_embeddings)
+
+    results = []
+    for idx, row in test_df.iterrows():
+        process_id = row['Process ID']
+        process_name = row['Process Name']
+        process_desc = row['Process Description']
+        result = {
+            'Process ID': process_id,
+            'Process Name': process_name,
+            'Process Description': process_desc,
+        }
+        for i in range(13):
+            prob = test_probs[i][idx][:].item() if isinstance(test_probs[i], np.ndarray) else test_probs[i].item()
+            applicability = "Yes" if prob > 0.5 else "No"
+            result[f'Dept {i+1} Applicability'] = f"{applicability} ({prob:.2f})"
+        results.append(result)
+
+    return pd.DataFrame(results)
+
